@@ -39,7 +39,9 @@ function _escapeRegex(str){
 $.ui.fancytree._FancytreeClass.prototype.applyFilter = function(filter){
 	var match, re,
 		count = 0,
-		leavesOnly = this.options.filter.leavesOnly;
+		leavesOnly = this.options.filter.leavesOnly,
+		parentsOnly = this.options.filter.parentsOnly,
+		displayAllChildren = this.options.filter.displayAllChildren;
 	// Reset current filter
 	this.visit(function(node){
 		delete node.match;
@@ -61,12 +63,26 @@ $.ui.fancytree._FancytreeClass.prototype.applyFilter = function(filter){
 		this.$div.addClass("fancytree-ext-filter-hide");
 	}
 	this.visit(function(node){
-		if ((!leavesOnly || node.children == null) && filter(node)) {
+	    if (((!leavesOnly && !parentsOnly) || (leavesOnly && parentsOnly && node.children == null)) && filter(node)) {
 			count++;
 			node.match = true;
 			node.visitParents(function(p){
 				p.subMatch = true;
 			});
+			if (displayAllChildren) {
+			    node.visit(function (p) {
+			        p.subMatch = true;
+			    });
+			}
+		}
+		if ((parentsOnly && node.children !== null) && filter(node)) {
+		    count++;
+		    node.match = true;
+		    if (displayAllChildren) {
+		        node.visit(function (p) {
+		            p.subMatch = true;
+		        });
+		    }
 		}
 	});
 	this.render();
@@ -98,10 +114,14 @@ $.ui.fancytree._FancytreeClass.prototype.clearFilter = function(){
 $.ui.fancytree.registerExtension({
 	name: "filter",
 	version: "0.0.1",
-	// Default options for this extension.
+    // Default options for this extension.
+    // cannot be both leavesOnly & parentOnly, if both, then they cancel eachother out
+    // when displayAllChildren is enabled all child nodes are added as a subMatch so they also display
 	options: {
 		mode: "dimm",
-		leavesOnly: false
+		leavesOnly: false,
+		parentsOnly: false,
+	    displayAllChildren: false
 	},
 	// Override virtual methods for this extension.
 	// `this`       : is this extension object
